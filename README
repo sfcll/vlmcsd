@@ -1,3 +1,4 @@
+原作者：
 To view the documentation cd to the directory containing the distribution
 files and type
 
@@ -12,3 +13,94 @@ man man/vlmcsd.7
 
 If you don't have man, you may also use the .txt, .html and .pdf files
 in the man directory
+
+自编译过程：
+1. 安装编译工具
+sudo apt update
+sudo apt install -y git build-essential
+
+如果你的系统没有 make 和 gcc，可以用：
+sudo apt install -y make gcc
+
+2. 下载源码
+git clone https://github.com/sfcll/vlmcsd.git
+cd vlmcsd
+
+3. 编译 64 位 vlmcsd
+make
+默认情况下，它会根据你的 CPU 架构自动编译。如果你想 强制 生成 64 位版本，可以指定：、
+make CC="gcc -march=armv8-a"
+
+4. 安装
+sudo mkdir /opt/vlmcs
+sudo addgroup --system vlmcs
+sudo adduser --system --home /opt/vlmcs --shell /usr/sbin/nologin --no-create-home --gecos 'vlmcs' --ingroup vlmcs --disabled-login --disabled-password vlmcs
+sudo chown -R vlmcs:vlmcs /opt/vlmcs
+
+sudo cp bin/* /opt/vlmcs/
+sudo chown -R vlmcs:vlmcs /opt/vlmcs
+sudo rm -rf vlmcsd
+
+6. 安装服务
+sudo nano /etc/systemd/system/vlmcsd.service
+
+[Unit]
+Description=vlmcsd
+After=network.target
+
+[Service]
+User=vlmcs
+Group=vlmcs
+Type=forking
+PIDFile=/run/vlmcs/vlmcsd.pid
+ExecStart=/opt/vlmcs/vlmcsd -p /run/vlmcs/vlmcsd.pid -L 192.168.1.240(自己的IP):1688
+ExecReload=/bin/kill -HUP $MAINPID
+LimitNOFILE=65535
+LimitNPROC=64
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+NoNewPrivileges=true
+DevicePolicy=closed
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+WorkingDirectory=/opt/vlmcs
+ReadOnlyDirectories=/
+KillMode=mixed
+RuntimeDirectory=vlmcs
+
+[Install]
+WantedBy=multi-user.target
+
+7. 启用服务
+sudo systemctl daemon-reload
+sudo systemctl enable vlmcsd.service
+sudo systemctl start vlmcsd.service
+sudo systemctl status vlmcsd.service
+
+8. 测试服务
+/opt/vlmcs/vlmcs -v -4 -i 4 -w 机器名 -l 181 192.168.1.200:1688
+
+9. 远程激活
+Windows
+设置KMS服务器地址
+slmgr /skms kms.example.com
+安装密钥(可选)
+slmgr /ipk xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
+手动执行激活请求
+slmgr /ato
+查询过期时间
+slmgr /xpr
+
+Office
+首先找到你的OSPP.VBS所在的目录，一般是office安装所在目录（Program Files\Microsoft Office\OfficeXX）
+设置KMS服务器地址：
+cscript ospp.vbs /sethst:kms.example.com
+手动执行激活请求:
+cscript ospp.vbs /act
